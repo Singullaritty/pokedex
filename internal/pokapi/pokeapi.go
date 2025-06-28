@@ -2,48 +2,62 @@ package pokapi
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/Singullaritty/pokedexcli/internal/pokecache"
 )
 
-type Locations struct {
-	Count    int     `json:"count"`
-	Next     *string `json:"next"`
-	Previous *string `json:"previous"`
-	Results  []struct {
-		Name string `json:"name"`
-		URL  string `json:"url"`
-	} `json:"results"`
-}
-
-func GetAreas(url string) (Locations, error) {
+func GetAreas(url string, cache *pokecache.Cache) (Locations, error) {
 	locs := Locations{}
-	cache := pokecache.NewCache(5 * time.Second)
-
 	if cacheData, ok := cache.Get(url); !ok {
 		response, err := http.Get(url)
 		if err != nil {
-			return Locations{}, err
+			return locs, err
 		}
 		defer response.Body.Close()
 		responseData, err := io.ReadAll(response.Body)
 		if err != nil {
-			return Locations{}, err
+			return locs, err
 		}
 		errs := json.Unmarshal(responseData, &locs)
 		if errs != nil {
-			return Locations{}, err
+			return locs, err
 		}
 		cache.Add(url, responseData)
 	} else {
 		err := json.Unmarshal(cacheData, &locs)
 		if err != nil {
-			return Locations{}, err
+			return locs, err
 		}
-
 	}
 	return locs, nil
+}
+
+func ExploreArea(name string, cache *pokecache.Cache) (LocationsArea, error) {
+	exploreUrl := fmt.Sprintf("https://pokeapi.co/api/v2/location-area/%s", name)
+	locsArea := LocationsArea{}
+	if cacheData, ok := cache.Get(exploreUrl); !ok {
+		response, err := http.Get(exploreUrl)
+		if err != nil {
+			return locsArea, err
+		}
+		defer response.Body.Close()
+		responseData, err := io.ReadAll(response.Body)
+		if err != nil {
+			return locsArea, err
+		}
+		errs := json.Unmarshal(responseData, &locsArea)
+		if errs != nil {
+			return locsArea, err
+		}
+		cache.Add(exploreUrl, responseData)
+	} else {
+		err := json.Unmarshal(cacheData, &locsArea)
+		if err != nil {
+			return locsArea, err
+		}
+	}
+	return locsArea, nil
 }
