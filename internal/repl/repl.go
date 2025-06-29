@@ -3,6 +3,7 @@ package repl
 import (
 	"bufio"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -37,6 +38,14 @@ type ExploreCommand struct {
 	Cache       *pokecache.Cache
 }
 
+type CatchCommand struct {
+	Name        string
+	Description string
+	Config      *Config
+	Cache       *pokecache.Cache
+	Pokemons    *map[string]pokapi.Pokemon
+}
+
 type MapCommand struct {
 	Name        string
 	Description string
@@ -54,6 +63,7 @@ type MapBackCommand struct {
 func NewCli() map[string]Command {
 	sharedConfig := &Config{}
 	cache := pokecache.NewCache(5 * time.Second)
+	pokemons := make(map[string]pokapi.Pokemon)
 
 	return map[string]Command{
 		"help": HelpCommand{
@@ -81,6 +91,13 @@ func NewCli() map[string]Command {
 			Description: "Explore pokemons in the location are",
 			Config:      sharedConfig,
 			Cache:       cache,
+		},
+		"catch": &CatchCommand{
+			Name:        "catch",
+			Description: "Catch pokemons",
+			Config:      sharedConfig,
+			Cache:       cache,
+			Pokemons:    &pokemons,
 		},
 	}
 
@@ -171,6 +188,44 @@ func (e *ExploreCommand) RunCmd(args []string) error {
 		fmt.Printf("\n - %s", p)
 	}
 	fmt.Println("")
+	return nil
+}
+
+func (c *CatchCommand) RunCmd(args []string) error {
+	res, err := pokapi.GetPokemonInfo(args[0], c.Cache)
+	pokName := res.Name
+	if err != nil {
+		return fmt.Errorf("failed to fetch data: %v", err)
+	}
+	if pokName == "" {
+		fmt.Printf("Pokemon %s doesn't exist\n", pokName)
+	} else if _, ok := (*c.Pokemons)[pokName]; ok {
+		fmt.Printf("%s already caught!\n", pokName)
+	} else {
+		fmt.Printf("Throwing a Pokeball at %s...\n", pokName)
+		exp := res.BaseExperience
+		switch {
+		case exp < 50:
+			fmt.Printf("%s was caught!\n", pokName)
+			(*c.Pokemons)[pokName] = res
+		case exp > 50 && exp <= 100:
+			chance := rand.Intn(4)
+			if chance == 3 {
+				fmt.Printf("%s was caught!\n", pokName)
+				(*c.Pokemons)[pokName] = res
+			} else {
+				fmt.Printf("%s escaped!\n", pokName)
+			}
+		case exp > 100:
+			chance := rand.Intn(6)
+			if chance == 5 {
+				fmt.Printf("%s was caught!\n", pokName)
+				(*c.Pokemons)[pokName] = res
+			} else {
+				fmt.Printf("%s escaped!\n", pokName)
+			}
+		}
+	}
 	return nil
 }
 
