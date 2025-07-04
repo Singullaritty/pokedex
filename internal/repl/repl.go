@@ -43,7 +43,7 @@ type CatchCommand struct {
 	Description string
 	Config      *Config
 	Cache       *pokecache.Cache
-	Pokemons    *map[string]pokapi.Pokemon
+	Pokemons    map[string]pokapi.Pokemon
 }
 
 type MapCommand struct {
@@ -58,6 +58,20 @@ type MapBackCommand struct {
 	Description string
 	Config      *Config
 	Cache       *pokecache.Cache
+}
+
+type InspectCommand struct {
+	Name        string
+	Description string
+	Config      *Config
+	Pokemons    map[string]pokapi.Pokemon
+}
+
+type PokedexCommand struct {
+	Name        string
+	Description string
+	Config      *Config
+	Pokemons    map[string]pokapi.Pokemon
 }
 
 func NewCli() map[string]Command {
@@ -97,7 +111,19 @@ func NewCli() map[string]Command {
 			Description: "Catch pokemons",
 			Config:      sharedConfig,
 			Cache:       cache,
-			Pokemons:    &pokemons,
+			Pokemons:    pokemons,
+		},
+		"inspect": &InspectCommand{
+			Name:        "inspect",
+			Description: "Inspect pokemons",
+			Config:      sharedConfig,
+			Pokemons:    pokemons,
+		},
+		"pokedex": &PokedexCommand{
+			Name:        "pokedex",
+			Description: "list of all the names of the Pokemons that were caught",
+			Config:      sharedConfig,
+			Pokemons:    pokemons,
 		},
 	}
 
@@ -199,32 +225,69 @@ func (c *CatchCommand) RunCmd(args []string) error {
 	}
 	if pokName == "" {
 		fmt.Printf("Pokemon %s doesn't exist\n", pokName)
-	} else if _, ok := (*c.Pokemons)[pokName]; ok {
+	}
+	if _, ok := c.Pokemons[pokName]; ok {
 		fmt.Printf("%s already caught!\n", pokName)
-	} else {
-		fmt.Printf("Throwing a Pokeball at %s...\n", pokName)
-		exp := res.BaseExperience
-		switch {
-		case exp < 50:
+		return nil
+	}
+	fmt.Printf("Throwing a Pokeball at %s...\n", pokName)
+	exp := res.BaseExperience
+	switch {
+	case exp <= 50:
+		fmt.Printf("%s was caught!\n", pokName)
+		fmt.Println("You may now inspect it with the inspect command.")
+		c.Pokemons[pokName] = res
+	case exp > 50 && exp <= 100:
+		chance := rand.Intn(4)
+		if chance == 3 {
 			fmt.Printf("%s was caught!\n", pokName)
-			(*c.Pokemons)[pokName] = res
-		case exp > 50 && exp <= 100:
-			chance := rand.Intn(4)
-			if chance == 3 {
-				fmt.Printf("%s was caught!\n", pokName)
-				(*c.Pokemons)[pokName] = res
-			} else {
-				fmt.Printf("%s escaped!\n", pokName)
-			}
-		case exp > 100:
-			chance := rand.Intn(6)
-			if chance == 5 {
-				fmt.Printf("%s was caught!\n", pokName)
-				(*c.Pokemons)[pokName] = res
-			} else {
-				fmt.Printf("%s escaped!\n", pokName)
-			}
+			fmt.Println("You may now inspect it with the inspect command.")
+			c.Pokemons[pokName] = res
+		} else {
+			fmt.Printf("%s escaped!\n", pokName)
 		}
+	case exp > 100:
+		chance := rand.Intn(6)
+		if chance == 5 {
+			fmt.Printf("%s was caught!\n", pokName)
+			fmt.Println("You may now inspect it with the inspect command.")
+			c.Pokemons[pokName] = res
+		} else {
+			fmt.Printf("%s escaped!\n", pokName)
+		}
+	}
+	return nil
+}
+
+func (i InspectCommand) RunCmd(args []string) error {
+	pokemonName := args[0]
+	val, ok := i.Pokemons[pokemonName]
+	if !ok {
+		fmt.Println("you have not caught that pokemon")
+		return nil
+	}
+	fmt.Printf("Name: %s\n", val.Name)
+	fmt.Printf("Height: %d\n", val.Height)
+	fmt.Printf("Weight: %d\n", val.Weight)
+	fmt.Println("Stats:")
+	for _, v := range val.Stats {
+		fmt.Printf("  -%s: %d\n", v.Stat.Name, v.BaseStat)
+	}
+	fmt.Println("Types:")
+	for _, v := range val.Types {
+		fmt.Printf("  - %s\n", v.Type.Name)
+	}
+	return nil
+}
+
+func (p PokedexCommand) RunCmd(args []string) error {
+	if len(p.Pokemons) == 0 {
+		fmt.Println("you have not caught that pokemon")
+		return nil
+	}
+	fmt.Println("Your Pokedex:")
+	for k := range p.Pokemons {
+		fmt.Printf("  - %s\n", k)
 	}
 	return nil
 }
@@ -239,12 +302,15 @@ func StartRepl() {
 			cmd, exists := initRepl[args[0]]
 			if !exists && args[0] != "" {
 				fmt.Println("No such command: ", args[0])
+				continue
 			}
-			if exists {
-				err := cmd.RunCmd(args[1:])
-				if err != nil {
-					fmt.Println("Error executing command", err)
-				}
+			if args[0] == "" {
+				continue
+			}
+			err := cmd.RunCmd(args[1:])
+			if err != nil {
+				fmt.Printf("Error executing command: %s", err)
+
 			}
 		} else {
 			fmt.Println("Error reading user input")
