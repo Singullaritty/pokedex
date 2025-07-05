@@ -1,6 +1,7 @@
 package repl
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -22,6 +23,8 @@ const (
 	KeyDown      = byte(66)
 	KeyEnter     = byte(13)
 )
+
+var ErrExit = errors.New("exit")
 
 type Command interface {
 	RunCmd(args []string) error
@@ -142,8 +145,7 @@ func NewCli() map[string]Command {
 
 func (e ExitCommand) RunCmd(args []string) error {
 	fmt.Print("Closing the Pokedex... Goodbye!")
-	os.Exit(0)
-	return nil
+	return ErrExit
 }
 
 func (h HelpCommand) RunCmd(args []string) error {
@@ -337,8 +339,12 @@ func StartRepl() {
 					break
 				}
 				err := cmd.RunCmd(args[1:])
+				if errors.Is(err, ErrExit) {
+					return
+				}
 				if err != nil {
 					fmt.Printf("Error executing command: %s", err)
+					return
 				}
 				lineBuffer = nil
 				fmt.Print("\r")
@@ -349,7 +355,7 @@ func StartRepl() {
 					fmt.Print("\b \b")
 				}
 			} else if b[0] == ControlC || b[0] == ControlD {
-				os.Exit(0)
+				return
 			}
 		}
 	}
