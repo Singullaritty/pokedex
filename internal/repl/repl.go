@@ -1,7 +1,6 @@
 package repl
 
 import (
-	"bufio"
 	"fmt"
 	"math/rand"
 	"os"
@@ -10,6 +9,18 @@ import (
 
 	"github.com/Singullaritty/pokedexcli/internal/pokapi"
 	"github.com/Singullaritty/pokedexcli/internal/pokecache"
+	"golang.org/x/term"
+)
+
+const (
+	ClearLine    = "\r\033[K"
+	ControlC     = byte(3)
+	ControlD     = byte(4)
+	KeyBackspace = byte(8)
+	KeyDelete    = byte(127)
+	KeyUp        = byte(65)
+	KeyDown      = byte(66)
+	KeyEnter     = byte(13)
 )
 
 type Command interface {
@@ -130,7 +141,7 @@ func NewCli() map[string]Command {
 }
 
 func (e ExitCommand) RunCmd(args []string) error {
-	fmt.Println("Closing the Pokedex... Goodbye!")
+	fmt.Print("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
@@ -156,7 +167,7 @@ func (m *MapCommand) RunCmd(args []string) error {
 	for _, n := range res.Results {
 		names = append(names, n.Name)
 	}
-	fmt.Println(strings.Join(names, "\n"))
+	fmt.Print(strings.Join(names, "\r\n"))
 
 	if res.Next != nil {
 		m.Config.NextUrl = *res.Next
@@ -186,7 +197,7 @@ func (mb *MapBackCommand) RunCmd(args []string) error {
 	for _, n := range res.Results {
 		names = append(names, n.Name)
 	}
-	fmt.Println(strings.Join(names, "\n"))
+	fmt.Println(strings.Join(names, "\r\n"))
 	if res.Previous != nil {
 		mb.Config.PreviousUrl = *res.Previous
 	} else {
@@ -294,27 +305,52 @@ func (p PokedexCommand) RunCmd(args []string) error {
 
 func StartRepl() {
 	initRepl := NewCli()
-	scanner := bufio.NewScanner(os.Stdin)
-	for {
-		fmt.Print("Pokedex > ")
-		if scanner.Scan() {
-			args := strings.Split(scanner.Text(), " ")
-			cmd, exists := initRepl[args[0]]
-			if !exists && args[0] != "" {
-				fmt.Println("No such command: ", args[0])
-				continue
-			}
-			if args[0] == "" {
-				continue
-			}
-			err := cmd.RunCmd(args[1:])
-			if err != nil {
-				fmt.Printf("Error executing command: %s", err)
+	fd := int(os.Stdin.Fd())
 
+	oldState, err := term.MakeRaw(fd)
+	if err != nil {
+		panic(err)
+	}
+	defer term.Restore(fd, oldState)
+
+	var lineBuffer []byte
+	var b = make([]byte, 1)
+	for {
+		fmt.Print("\r\033[K")
+		fmt.Print("Pokedex > ")
+		for {
+			os.Stdin.Read(b)
+			if b[0] >= 32 && b[0] <= 126 {
+				lineBuffer = append(lineBuffer, b[0])
+				fmt.Print(string(b[0]))
+
+			} else if b[0] == KeyEnter {
+				fmt.Println("\r")
+				args := strings.Fields(string(lineBuffer))
+				if len(args) == 0 {
+					break
+				}
+				cmd, exists := initRepl[args[0]]
+				if !exists && args[0] != "" {
+					fmt.Printf("Command %s doesn't exist\r\n", args[0])
+					lineBuffer = nil
+					break
+				}
+				err := cmd.RunCmd(args[1:])
+				if err != nil {
+					fmt.Printf("Error executing command: %s", err)
+				}
+				lineBuffer = nil
+				fmt.Print("\r")
+				break
+			} else if b[0] == KeyBackspace || b[0] == KeyDelete {
+				if len(lineBuffer) > 0 {
+					lineBuffer = lineBuffer[:len(lineBuffer)-1]
+					fmt.Print("\b \b")
+				}
+			} else if b[0] == ControlC || b[0] == ControlD {
+				os.Exit(0)
 			}
-		} else {
-			fmt.Println("Error reading user input")
-			break
 		}
 	}
 }
