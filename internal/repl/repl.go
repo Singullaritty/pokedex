@@ -17,6 +17,7 @@ const (
 	ClearLine    = "\r\033[K"
 	ControlC     = byte(3)
 	ControlD     = byte(4)
+	KeyEscape    = byte(27)
 	KeyBackspace = byte(8)
 	KeyDelete    = byte(127)
 	KeyUp        = byte(65)
@@ -149,10 +150,10 @@ func (e ExitCommand) RunCmd(args []string) error {
 }
 
 func (h HelpCommand) RunCmd(args []string) error {
-	fmt.Println("Welcome to the Pokedex!")
-	fmt.Println("Usage:")
-	fmt.Println("\nhelp: Displays a help message")
-	fmt.Println("exit: Exits from program")
+	fmt.Println("\rWelcome to the Pokedex!")
+	fmt.Println("\rUsage:")
+	fmt.Println("\r    help: Displays a help message")
+	fmt.Println("\r    exit: Exits from program")
 	return nil
 }
 
@@ -251,8 +252,8 @@ func (c *CatchCommand) RunCmd(args []string) error {
 		fmt.Println("You may now inspect it with the inspect command.")
 		c.Pokemons[pokName] = res
 	case exp > 50 && exp <= 100:
-		chance := rand.Intn(4)
-		if chance == 3 {
+		chance := rand.Intn(3)
+		if chance == 2 {
 			fmt.Printf("%s was caught!\n", pokName)
 			fmt.Println("You may now inspect it with the inspect command.")
 			c.Pokemons[pokName] = res
@@ -260,8 +261,8 @@ func (c *CatchCommand) RunCmd(args []string) error {
 			fmt.Printf("%s escaped!\n", pokName)
 		}
 	case exp > 100:
-		chance := rand.Intn(6)
-		if chance == 5 {
+		chance := rand.Intn(5)
+		if chance == 4 {
 			fmt.Printf("%s was caught!\n", pokName)
 			fmt.Println("You may now inspect it with the inspect command.")
 			c.Pokemons[pokName] = res
@@ -317,6 +318,8 @@ func StartRepl() {
 
 	var lineBuffer []byte
 	var b = make([]byte, 1)
+	var history []string
+	var historyIndex int
 	for {
 		fmt.Print("\r\033[K")
 		fmt.Print("Pokedex > ")
@@ -325,7 +328,22 @@ func StartRepl() {
 			if b[0] >= 32 && b[0] <= 126 {
 				lineBuffer = append(lineBuffer, b[0])
 				fmt.Print(string(b[0]))
-
+			} else if b[0] == KeyEscape {
+				os.Stdin.Read(b)
+				if b[0] == '[' {
+					os.Stdin.Read(b)
+					if b[0] == 'A' && historyIndex < len(history) {
+						fmt.Print(history[historyIndex])
+						for _, w := range strings.Split(history[historyIndex], "") {
+							lineBuffer = append(lineBuffer, byte(w[0]))
+						}
+						historyIndex++
+					}
+					if b[0] == 'B' && historyIndex != 0 {
+						fmt.Print(history[historyIndex-1])
+						historyIndex--
+					}
+				}
 			} else if b[0] == KeyEnter {
 				fmt.Println("\r")
 				args := strings.Fields(string(lineBuffer))
@@ -346,6 +364,8 @@ func StartRepl() {
 					fmt.Printf("Error executing command: %s", err)
 					return
 				}
+				history = append(history, args[0])
+				historyIndex = len(history) - 1
 				lineBuffer = nil
 				fmt.Print("\r")
 				break
