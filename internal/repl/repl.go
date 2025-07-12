@@ -27,68 +27,6 @@ const (
 
 var ErrExit = errors.New("exit")
 
-type Command interface {
-	RunCmd(args []string) error
-}
-
-type Config struct {
-	NextUrl     string
-	PreviousUrl string
-}
-
-type HelpCommand struct {
-	Name        string
-	Description string
-}
-
-type ExitCommand struct {
-	Name        string
-	Description string
-}
-
-type ExploreCommand struct {
-	Name        string
-	Description string
-	Config      *Config
-	Cache       *pokecache.Cache
-}
-
-type CatchCommand struct {
-	Name        string
-	Description string
-	Config      *Config
-	Cache       *pokecache.Cache
-	Pokemons    map[string]pokapi.Pokemon
-}
-
-type MapCommand struct {
-	Name        string
-	Description string
-	Config      *Config
-	Cache       *pokecache.Cache
-}
-
-type MapBackCommand struct {
-	Name        string
-	Description string
-	Config      *Config
-	Cache       *pokecache.Cache
-}
-
-type InspectCommand struct {
-	Name        string
-	Description string
-	Config      *Config
-	Pokemons    map[string]pokapi.Pokemon
-}
-
-type PokedexCommand struct {
-	Name        string
-	Description string
-	Config      *Config
-	Pokemons    map[string]pokapi.Pokemon
-}
-
 func NewCli() map[string]Command {
 	sharedConfig := &Config{}
 	cache := pokecache.NewCache(5 * time.Second)
@@ -318,36 +256,59 @@ func StartRepl() {
 
 	var lineBuffer []byte
 	var b = make([]byte, 1)
+	var esc = make([]byte, 2)
 	var history []string
 	var historyIndex int
 	for {
-		fmt.Print("\r\033[K")
+		fmt.Print(ClearLine)
 		fmt.Print("Pokedex > ")
 		for {
-			os.Stdin.Read(b)
+			_, err := os.Stdin.Read(b)
+			if err != nil {
+				fmt.Printf("Error reading stdin: %s", err)
+				return
+			}
 			if b[0] >= 32 && b[0] <= 126 {
 				lineBuffer = append(lineBuffer, b[0])
 				fmt.Print(string(b[0]))
 			} else if b[0] == KeyEscape {
-				os.Stdin.Read(b)
-				if b[0] == '[' {
-					os.Stdin.Read(b)
-					if b[0] == 'A' && historyIndex < len(history) {
+				_, err := os.Stdin.Read(esc)
+				if err != nil {
+					fmt.Printf("Error reading stdin: %s", err)
+					return
+				}
+				if len(history) == 0 {
+					continue
+				}
+				if esc[0] == '[' && esc[1] == KeyUp {
+					if historyIndex >= 0 {
+						lineBuffer = []byte(history[historyIndex])
+						fmt.Print(ClearLine)
+						fmt.Print("Pokedex > ")
 						fmt.Print(history[historyIndex])
-						for _, w := range strings.Split(history[historyIndex], "") {
-							lineBuffer = append(lineBuffer, byte(w[0]))
+						if historyIndex > 0 {
+							historyIndex--
 						}
-						historyIndex++
 					}
-					if b[0] == 'B' && historyIndex != 0 {
-						fmt.Print(history[historyIndex-1])
-						historyIndex--
+				}
+				if esc[0] == '[' && esc[1] == KeyDown {
+					if historyIndex == len(history)-1 {
+						lineBuffer = nil
+						fmt.Print(ClearLine)
+						fmt.Print("Pokedex > ")
+						continue
 					}
+					lineBuffer = []byte(history[historyIndex])
+					fmt.Print(ClearLine)
+					fmt.Print("Pokedex > ")
+					fmt.Print(history[historyIndex+1])
+					historyIndex++
 				}
 			} else if b[0] == KeyEnter {
 				fmt.Println("\r")
 				args := strings.Fields(string(lineBuffer))
 				if len(args) == 0 {
+					historyIndex = len(history) - 1
 					break
 				}
 				cmd, exists := initRepl[args[0]]
