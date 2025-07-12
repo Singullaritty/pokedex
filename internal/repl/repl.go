@@ -153,7 +153,8 @@ func (mb *MapBackCommand) RunCmd(args []string) error {
 
 func (e *ExploreCommand) RunCmd(args []string) error {
 	pokemons := []string{}
-	res, err := pokapi.ExploreArea(args[0], e.Cache)
+	url := fmt.Sprintf("https://pokeapi.co/api/v2/location-area/%s", args[0])
+	res, err := pokapi.ExploreArea(url, e.Cache)
 	if err != nil {
 		return fmt.Errorf("failed to fetch data: %v", err)
 	}
@@ -170,7 +171,8 @@ func (e *ExploreCommand) RunCmd(args []string) error {
 }
 
 func (c *CatchCommand) RunCmd(args []string) error {
-	res, err := pokapi.GetPokemonInfo(args[0], c.Cache)
+	url := fmt.Sprintf("https://pokeapi.co/api/v2/pokemon/%s", args[0])
+	res, err := pokapi.GetPokemonInfo(url, c.Cache)
 	pokName := res.Name
 	if err != nil {
 		return fmt.Errorf("failed to fetch data: %v", err)
