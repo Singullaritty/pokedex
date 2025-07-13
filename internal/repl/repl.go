@@ -88,10 +88,29 @@ func (e ExitCommand) RunCmd(args []string) error {
 }
 
 func (h HelpCommand) RunCmd(args []string) error {
+	initCmd := NewCli()
 	fmt.Println("\rWelcome to the Pokedex!")
 	fmt.Println("\rUsage:")
-	fmt.Println("\r    help: Displays a help message")
-	fmt.Println("\r    exit: Exits from program")
+	for _, v := range initCmd {
+		switch val := v.(type) {
+		case HelpCommand:
+			fmt.Println("\r   " + val.Name + " - " + val.Description)
+		case ExitCommand:
+			fmt.Println("\r   " + val.Name + " - " + val.Description)
+		case *MapCommand:
+			fmt.Println("\r   " + val.Name + " - " + val.Description)
+		case *MapBackCommand:
+			fmt.Println("\r   " + val.Name + " - " + val.Description)
+		case *ExploreCommand:
+			fmt.Println("\r   " + val.Name + " - " + val.Description)
+		case *CatchCommand:
+			fmt.Println("\r   " + val.Name + " - " + val.Description)
+		case *InspectCommand:
+			fmt.Println("\r   " + val.Name + " - " + val.Description)
+		case *PokedexCommand:
+			fmt.Println("\r   " + val.Name + " - " + val.Description)
+		}
+	}
 	return nil
 }
 
