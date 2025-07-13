@@ -180,10 +180,10 @@ func (e *ExploreCommand) RunCmd(args []string) error {
 	for _, p := range res.PokemonEncounters {
 		pokemons = append(pokemons, p.Pokemon.Name)
 	}
-	fmt.Printf("Exploring %s...", args[0])
-	fmt.Print("\nFound pokemon:")
+	fmt.Printf("\rExploring %s...", args[0])
+	fmt.Print("\r\nFound pokemon:")
 	for _, p := range pokemons {
-		fmt.Printf("\n - %s", p)
+		fmt.Printf("\r\n - %s", p)
 	}
 	fmt.Println("")
 	return nil
@@ -197,36 +197,36 @@ func (c *CatchCommand) RunCmd(args []string) error {
 		return fmt.Errorf("failed to fetch data: %v", err)
 	}
 	if pokName == "" {
-		fmt.Printf("Pokemon %s doesn't exist\n", pokName)
+		fmt.Printf("\rPokemon %s doesn't exist\n", pokName)
 	}
 	if _, ok := c.Pokemons[pokName]; ok {
-		fmt.Printf("%s already caught!\n", pokName)
+		fmt.Printf("\r%s already caught!\n", pokName)
 		return nil
 	}
 	fmt.Printf("Throwing a Pokeball at %s...\n", pokName)
 	exp := res.BaseExperience
 	switch {
 	case exp <= 50:
-		fmt.Printf("%s was caught!\n", pokName)
-		fmt.Println("You may now inspect it with the inspect command.")
+		fmt.Printf("\r%s was caught!\n", pokName)
+		fmt.Println("\rYou may now inspect it with the inspect command.")
 		c.Pokemons[pokName] = res
 	case exp > 50 && exp <= 100:
 		chance := rand.Intn(3)
 		if chance == 2 {
-			fmt.Printf("%s was caught!\n", pokName)
-			fmt.Println("You may now inspect it with the inspect command.")
+			fmt.Printf("\r%s was caught!\n", pokName)
+			fmt.Println("\rYou may now inspect it with the inspect command.")
 			c.Pokemons[pokName] = res
 		} else {
-			fmt.Printf("%s escaped!\n", pokName)
+			fmt.Printf("\r%s escaped!\n", pokName)
 		}
 	case exp > 100:
 		chance := rand.Intn(5)
 		if chance == 4 {
-			fmt.Printf("%s was caught!\n", pokName)
-			fmt.Println("You may now inspect it with the inspect command.")
+			fmt.Printf("\r%s was caught!\n", pokName)
+			fmt.Println("\rYou may now inspect it with the inspect command.")
 			c.Pokemons[pokName] = res
 		} else {
-			fmt.Printf("%s escaped!\n", pokName)
+			fmt.Printf("\r%s escaped!\n", pokName)
 		}
 	}
 	return nil
@@ -239,16 +239,16 @@ func (i InspectCommand) RunCmd(args []string) error {
 		fmt.Println("you have not caught that pokemon")
 		return nil
 	}
-	fmt.Printf("Name: %s\n", val.Name)
-	fmt.Printf("Height: %d\n", val.Height)
-	fmt.Printf("Weight: %d\n", val.Weight)
-	fmt.Println("Stats:")
+	fmt.Printf("\rName: %s\n", val.Name)
+	fmt.Printf("\rHeight: %d\n", val.Height)
+	fmt.Printf("\rWeight: %d\n", val.Weight)
+	fmt.Println("\rStats:")
 	for _, v := range val.Stats {
-		fmt.Printf("  -%s: %d\n", v.Stat.Name, v.BaseStat)
+		fmt.Printf("\r  -%s: %d\n", v.Stat.Name, v.BaseStat)
 	}
-	fmt.Println("Types:")
+	fmt.Println("\rTypes:")
 	for _, v := range val.Types {
-		fmt.Printf("  - %s\n", v.Type.Name)
+		fmt.Printf("\r  - %s\n", v.Type.Name)
 	}
 	return nil
 }
@@ -260,7 +260,7 @@ func (p PokedexCommand) RunCmd(args []string) error {
 	}
 	fmt.Println("Your Pokedex:")
 	for k := range p.Pokemons {
-		fmt.Printf("  - %s\n", k)
+		fmt.Printf("\r  - %s\n", k)
 	}
 	return nil
 }
