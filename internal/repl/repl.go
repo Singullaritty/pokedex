@@ -203,7 +203,7 @@ func (c *CatchCommand) RunCmd(args []string) error {
 		fmt.Printf("\r%s already caught!\n", pokName)
 		return nil
 	}
-	fmt.Printf("Throwing a Pokeball at %s...\n", pokName)
+	fmt.Printf("\rThrowing a Pokeball at %s...\n", pokName)
 	exp := res.BaseExperience
 	switch {
 	case exp <= 50:
@@ -346,7 +346,7 @@ func StartRepl() {
 					fmt.Printf("Error executing command: %s", err)
 					return
 				}
-				history = append(history, args[0])
+				history = append(history, strings.Join(args, " "))
 				historyIndex = len(history) - 1
 				lineBuffer = nil
 				fmt.Print("\r")

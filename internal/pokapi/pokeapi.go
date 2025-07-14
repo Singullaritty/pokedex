@@ -2,6 +2,7 @@ package pokapi
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -17,6 +18,9 @@ func GetAreas(url string, cache *pokecache.Cache) (Locations, error) {
 			return locs, err
 		}
 		defer response.Body.Close()
+		if response.StatusCode != http.StatusOK {
+			return locs, fmt.Errorf("error: received status code %d", response.StatusCode)
+		}
 		responseData, err := io.ReadAll(response.Body)
 		if err != nil {
 			return locs, err
@@ -44,6 +48,9 @@ func ExploreArea(exploreUrl string, cache *pokecache.Cache) (LocationsArea, erro
 			return locsArea, err
 		}
 		defer response.Body.Close()
+		if response.StatusCode != http.StatusOK {
+			return locsArea, fmt.Errorf("received status code %d", response.StatusCode)
+		}
 		responseData, err := io.ReadAll(response.Body)
 		if err != nil {
 			return locsArea, err
@@ -71,6 +78,9 @@ func GetPokemonInfo(pokeUrl string, cache *pokecache.Cache) (Pokemon, error) {
 			return pokemon, err
 		}
 		defer response.Body.Close()
+		if response.StatusCode != http.StatusOK {
+			return pokemon, fmt.Errorf("received status code %d", response.StatusCode)
+		}
 		responseData, err := io.ReadAll(response.Body)
 		if err != nil {
 			return pokemon, err
