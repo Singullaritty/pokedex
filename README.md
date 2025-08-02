@@ -9,14 +9,16 @@ Interactive cli for exploring & catching pokemons through [PokeAPI](https://poke
     Pokedex > help
     Welcome to the Pokedex!
     Usage:
-       map - Print pokemon location areas
-       mapb - Print previous pokemon location areas
-       explore - Explore pokemons in the location are
-       catch - Catch pokemons
-       inspect - Inspect pokemons
-       pokedex - list of all the names of the Pokemons that were caught
-       help - Displays a help message
-       exit - Exits from program
+      help        - Displays a help message
+      exit        - Exits from program
+      map         - Print pokemon location areas
+      mapb        - Print previous pokemon location areas
+      mapb        - Print previous pokemon location areas
+      explore     - Explore pokemons in the location are
+      catch       - Catch pokemons
+      inspect     - Inspect pokemons
+      pokedex     - List of all the names of the Pokemons that were caught
+
 ```
 ## `map`
 ```bash
