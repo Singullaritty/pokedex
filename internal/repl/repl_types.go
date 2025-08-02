@@ -1,7 +1,6 @@
 package repl
 
 import (
-	"github.com/Singullaritty/pokedexcli/internal/pokapi"
 	"github.com/Singullaritty/pokedexcli/internal/pokecache"
 )
 
@@ -32,7 +31,7 @@ type CatchCommand struct {
 	Description string
 	Config      *Config
 	Cache       *pokecache.Cache
-	Pokemons    map[string]pokapi.Pokemon
+	Pokemons    map[string]Pokemon
 }
 
 type MapCommand struct {
@@ -53,14 +52,14 @@ type InspectCommand struct {
 	Name        string
 	Description string
 	Config      *Config
-	Pokemons    map[string]pokapi.Pokemon
+	Pokemons    map[string]Pokemon
 }
 
 type PokedexCommand struct {
 	Name        string
 	Description string
 	Config      *Config
-	Pokemons    map[string]pokapi.Pokemon
+	Pokemons    map[string]Pokemon
 }
 
 type Command interface {

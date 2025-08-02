@@ -1,6 +1,7 @@
 package repl
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -30,53 +31,45 @@ var ErrExit = errors.New("exit")
 func NewCli() map[string]Command {
 	sharedConfig := &Config{}
 	cache := pokecache.NewCache(5 * time.Second)
-	pokemons := make(map[string]pokapi.Pokemon)
+	pokemons := make(map[string]Pokemon)
 
 	return map[string]Command{
 		"help": HelpCommand{
-			Name:        "help",
-			Description: "Displays a help message",
+			Name: "help",
 		},
 		"exit": ExitCommand{
-			Name:        "exit",
-			Description: "Exits from program",
+			Name: "exit",
 		},
 		"map": &MapCommand{
-			Name:        "map",
-			Description: "Print pokemon location areas",
-			Config:      sharedConfig,
-			Cache:       cache,
+			Name:   "map",
+			Config: sharedConfig,
+			Cache:  cache,
 		},
 		"mapb": &MapBackCommand{
-			Name:        "mapb",
-			Description: "Print previous pokemon location areas",
-			Config:      sharedConfig,
-			Cache:       cache,
+			Name:   "mapb",
+			Config: sharedConfig,
+			Cache:  cache,
 		},
 		"explore": &ExploreCommand{
-			Name:        "explore",
-			Description: "Explore pokemons in the location are",
-			Config:      sharedConfig,
-			Cache:       cache,
+			Name:   "explore",
+			Config: sharedConfig,
+			Cache:  cache,
 		},
 		"catch": &CatchCommand{
-			Name:        "catch",
-			Description: "Catch pokemons",
-			Config:      sharedConfig,
-			Cache:       cache,
-			Pokemons:    pokemons,
+			Name:     "catch",
+			Config:   sharedConfig,
+			Cache:    cache,
+			Pokemons: pokemons,
 		},
 		"inspect": &InspectCommand{
-			Name:        "inspect",
-			Description: "Inspect pokemons",
-			Config:      sharedConfig,
-			Pokemons:    pokemons,
+			Name:     "inspect",
+			Config:   sharedConfig,
+			Pokemons: pokemons,
 		},
 		"pokedex": &PokedexCommand{
-			Name:        "pokedex",
-			Description: "list of all the names of the Pokemons that were caught",
-			Config:      sharedConfig,
-			Pokemons:    pokemons,
+			Name:     "pokedex",
+			Config:   sharedConfig,
+			Pokemons: pokemons,
 		},
 	}
 
@@ -88,55 +81,48 @@ func (e ExitCommand) RunCmd(args []string) error {
 }
 
 func (h HelpCommand) RunCmd(args []string) error {
-	initCmd := NewCli()
 	fmt.Println("\rWelcome to the Pokedex!")
 	fmt.Println("\rUsage:")
-	for _, v := range initCmd {
-		switch val := v.(type) {
-		case HelpCommand:
-			fmt.Println("\r   " + val.Name + " - " + val.Description)
-		case ExitCommand:
-			fmt.Println("\r   " + val.Name + " - " + val.Description)
-		case *MapCommand:
-			fmt.Println("\r   " + val.Name + " - " + val.Description)
-		case *MapBackCommand:
-			fmt.Println("\r   " + val.Name + " - " + val.Description)
-		case *ExploreCommand:
-			fmt.Println("\r   " + val.Name + " - " + val.Description)
-		case *CatchCommand:
-			fmt.Println("\r   " + val.Name + " - " + val.Description)
-		case *InspectCommand:
-			fmt.Println("\r   " + val.Name + " - " + val.Description)
-		case *PokedexCommand:
-			fmt.Println("\r   " + val.Name + " - " + val.Description)
-		}
-	}
+	fmt.Println("\r  help        - Displays a help message")
+	fmt.Println("\r  exit        - Exits from program")
+	fmt.Println("\r  map         - Print pokemon location areas")
+	fmt.Println("\r  mapb        - Print previous pokemon location areas")
+	fmt.Println("\r  mapb        - Print previous pokemon location areas")
+	fmt.Println("\r  explore     - Explore pokemons in the location are")
+	fmt.Println("\r  catch       - Catch pokemons")
+	fmt.Println("\r  inspect     - Inspect pokemons")
+	fmt.Println("\r  pokedex     - List of all the names of the Pokemons that were caught")
 	return nil
 }
 
 func (m *MapCommand) RunCmd(args []string) error {
 	names := []string{}
+	areas := Areas{}
 	pokeNext := m.Config.NextUrl
 	if pokeNext == "" {
 		pokeNext = "https://pokeapi.co/api/v2/location-area/"
 	}
-	res, err := pokapi.GetAreas(pokeNext, m.Cache)
+	res, err := pokapi.GetApiData(pokeNext, m.Cache)
 	if err != nil {
 		return fmt.Errorf("failed to fetch data: %v", err)
 	}
-	for _, n := range res.Results {
+	err = json.Unmarshal(res, &areas)
+	if err != nil {
+		return err
+	}
+	for _, n := range areas.Results {
 		names = append(names, n.Name)
 	}
 	fmt.Print(strings.Join(names, "\r\n"))
 
-	if res.Next != nil {
-		m.Config.NextUrl = *res.Next
+	if areas.Next != nil {
+		m.Config.NextUrl = *areas.Next
 	} else {
 		fmt.Println("No areas to explore!")
 		m.Config.NextUrl = ""
 	}
-	if res.Previous != nil {
-		m.Config.PreviousUrl = *res.Previous
+	if areas.Previous != nil {
+		m.Config.PreviousUrl = *areas.Previous
 	} else {
 		m.Config.PreviousUrl = ""
 	}
@@ -145,57 +131,71 @@ func (m *MapCommand) RunCmd(args []string) error {
 
 func (mb *MapBackCommand) RunCmd(args []string) error {
 	names := []string{}
+	areas := Areas{}
 	pokePrevious := mb.Config.PreviousUrl
 	if pokePrevious == "" {
 		fmt.Println("you're on the first page")
 		return nil
 	}
-	res, err := pokapi.GetAreas(pokePrevious, mb.Cache)
+	res, err := pokapi.GetApiData(pokePrevious, mb.Cache)
 	if err != nil {
 		return fmt.Errorf("failed to fetch data: %v", err)
 	}
-	for _, n := range res.Results {
+	err = json.Unmarshal(res, &areas)
+	if err != nil {
+		return err
+	}
+	for _, n := range areas.Results {
 		names = append(names, n.Name)
 	}
 	fmt.Println(strings.Join(names, "\r\n"))
-	if res.Previous != nil {
-		mb.Config.PreviousUrl = *res.Previous
+	if areas.Previous != nil {
+		mb.Config.PreviousUrl = *areas.Previous
 	} else {
 		mb.Config.PreviousUrl = ""
 	}
 
-	if res.Next != nil {
-		mb.Config.NextUrl = *res.Next
+	if areas.Next != nil {
+		mb.Config.NextUrl = *areas.Next
 	}
 	return nil
 }
 
 func (e *ExploreCommand) RunCmd(args []string) error {
 	pokemons := []string{}
+	locationArea := LocationsArea{}
 	url := fmt.Sprintf("https://pokeapi.co/api/v2/location-area/%s", args[0])
-	res, err := pokapi.ExploreArea(url, e.Cache)
+	res, err := pokapi.GetApiData(url, e.Cache)
 	if err != nil {
 		return fmt.Errorf("failed to fetch data: %v", err)
 	}
-	for _, p := range res.PokemonEncounters {
+	err = json.Unmarshal(res, &locationArea)
+	if err != nil {
+		return err
+	}
+	for _, p := range locationArea.PokemonEncounters {
 		pokemons = append(pokemons, p.Pokemon.Name)
 	}
 	fmt.Printf("\rExploring %s...", args[0])
 	fmt.Print("\r\nFound pokemon:")
 	for _, p := range pokemons {
-		fmt.Printf("\r\n - %s", p)
+		fmt.Printf("\r\n - %s\n", p)
 	}
-	fmt.Println("")
 	return nil
 }
 
 func (c *CatchCommand) RunCmd(args []string) error {
+	pokemon := Pokemon{}
 	url := fmt.Sprintf("https://pokeapi.co/api/v2/pokemon/%s", args[0])
-	res, err := pokapi.GetPokemonInfo(url, c.Cache)
-	pokName := res.Name
+	res, err := pokapi.GetApiData(url, c.Cache)
 	if err != nil {
 		return fmt.Errorf("failed to fetch data: %v", err)
 	}
+	err = json.Unmarshal(res, &pokemon)
+	if err != nil {
+		return err
+	}
+	pokName := pokemon.Name
 	if pokName == "" {
 		fmt.Printf("\rPokemon %s doesn't exist\n", pokName)
 	}
@@ -204,18 +204,18 @@ func (c *CatchCommand) RunCmd(args []string) error {
 		return nil
 	}
 	fmt.Printf("\rThrowing a Pokeball at %s...\n", pokName)
-	exp := res.BaseExperience
+	exp := pokemon.BaseExperience
 	switch {
 	case exp <= 50:
 		fmt.Printf("\r%s was caught!\n", pokName)
 		fmt.Println("\rYou may now inspect it with the inspect command.")
-		c.Pokemons[pokName] = res
+		c.Pokemons[pokName] = pokemon
 	case exp > 50 && exp <= 100:
 		chance := rand.Intn(3)
 		if chance == 2 {
 			fmt.Printf("\r%s was caught!\n", pokName)
 			fmt.Println("\rYou may now inspect it with the inspect command.")
-			c.Pokemons[pokName] = res
+			c.Pokemons[pokName] = pokemon
 		} else {
 			fmt.Printf("\r%s escaped!\n", pokName)
 		}
@@ -224,7 +224,7 @@ func (c *CatchCommand) RunCmd(args []string) error {
 		if chance == 4 {
 			fmt.Printf("\r%s was caught!\n", pokName)
 			fmt.Println("\rYou may now inspect it with the inspect command.")
-			c.Pokemons[pokName] = res
+			c.Pokemons[pokName] = pokemon
 		} else {
 			fmt.Printf("\r%s escaped!\n", pokName)
 		}

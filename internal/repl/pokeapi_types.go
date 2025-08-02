@@ -1,6 +1,6 @@
-package pokapi
+package repl
 
-type Locations struct {
+type Areas struct {
 	Count    int     `json:"count"`
 	Next     *string `json:"next"`
 	Previous *string `json:"previous"`
